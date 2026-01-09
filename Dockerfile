@@ -15,14 +15,15 @@ ENV VITE_API_URL=/api
 # Build
 RUN npm run build
 
-# Stage 2: Serve with Nginx
-FROM nginx:alpine
+# Stage 2: Serve with Caddy (Automatic HTTPS)
+FROM caddy:2-alpine
 
-# Copy built files
-COPY --from=build /app/dist /usr/share/nginx/html
+# Copy built files to Caddy's web root
+COPY --from=build /app/dist /srv
 
-# Copy Nginx config (we will create this next)
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy Caddy config
+COPY Caddyfile /etc/caddy/Caddyfile
 
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+EXPOSE 443
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]

@@ -1,0 +1,11 @@
+158.69.205.142.nip.io {
+    root * /srv
+    encode gzip
+    
+    # Serve static files (React)
+    file_server
+    try_files {path} /index.html
+
+    # Proxy API to backend
+    reverse_proxy /api/* backend:3001
+}
