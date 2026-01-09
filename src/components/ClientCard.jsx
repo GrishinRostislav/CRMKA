@@ -158,7 +158,7 @@ const ClientCard = ({ client, onClose, onUpdate }) => {
                     {activeTab === 'info' && (
                         <div className="info-tab">
                             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
-                                <button className="secondary-btn sm" onClick={handleEditToggle}>
+                                <button className={isEditing ? "secondary-btn sm" : "primary-btn sm"} onClick={handleEditToggle}>
                                     {isEditing ? 'Cancel Edit' : 'Edit Profile'}
                                 </button>
                             </div>
