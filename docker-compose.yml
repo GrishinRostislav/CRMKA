@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  # Backend Service
+  backend:
+    build: ./server
+    container_name: crmka-backend
+    volumes:
+      - crmka_db_data:/app/data
+    environment:
+      - DB_PATH=/app/data/crmka.db
+    restart: always
+
+  # Frontend Service (Nginx)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crmka-frontend
+    ports:
+      - "80:80" # Maps VPS port 80 to container
+      # - "443:443"  # Uncomment if you set up SSL later
+    depends_on:
+      - backend
+    restart: always
+
+# Persistent storage for SQLite
+volumes:
+  crmka_db_data:
