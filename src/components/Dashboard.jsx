@@ -32,9 +32,13 @@ const Dashboard = ({ user, onLogout }) => {
 
     // Forms
     const [newMember, setNewMember] = useState({ name: '', email: '', password: '', role: 'worker' });
-    const [newClient, setNewClient] = useState({ name: '', email: '', phone: '', company: '', address: '' });
+    const [newClient, setNewClient] = useState({ name: '', email: '', phone: '', company: '', address: '', custom_fields: {} });
     const [newItem, setNewItem] = useState({ name: '', quantity: 0, unit: 'pcs', min_quantity: 5 });
     const [submitting, setSubmitting] = useState(false);
+
+    // Custom Fields Config
+    const [customFieldsConfig, setCustomFieldsConfig] = useState([]);
+    const [newFieldDefinition, setNewFieldDefinition] = useState({ label: '', type: 'text' });
 
     // Initial load
     useEffect(() => {
@@ -48,6 +52,10 @@ const Dashboard = ({ user, onLogout }) => {
             setCurrentMember(member);
             const { companies } = await companyAPI.getMyCompanies();
             setCompanies(companies);
+
+            // Load Settings
+            const settings = await companyAPI.getSettings();
+            setCustomFieldsConfig(settings.client_fields_config || []);
         } catch (err) {
             console.error("Failed to load company context", err);
         }
@@ -134,7 +142,7 @@ const Dashboard = ({ user, onLogout }) => {
             await clientsAPI.create(newClient);
             await loadClients();
             setShowAddClient(false);
-            setNewClient({ name: '', email: '', phone: '', company: '', address: '' });
+            setNewClient({ name: '', email: '', phone: '', company: '', address: '', custom_fields: {} });
         } catch (err) {
             alert(err.message);
         } finally {
@@ -210,6 +218,33 @@ const Dashboard = ({ user, onLogout }) => {
                 c.id == localStorage.getItem('companyId') ? { ...c, name: tempCompanyName } : c
             ));
             setIsEditingCompany(false);
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
+    // Field Management
+    const handleAddField = async (e) => {
+        e.preventDefault();
+        try {
+            const key = newFieldDefinition.label.toLowerCase().replace(/\s+/g, '_');
+            const newField = { ...newFieldDefinition, key };
+            const updatedConfig = [...customFieldsConfig, newField];
+
+            await companyAPI.updateSettings({ client_fields_config: updatedConfig });
+            setCustomFieldsConfig(updatedConfig);
+            setNewFieldDefinition({ label: '', type: 'text' });
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
+    const handleDeleteField = async (key) => {
+        if (!confirm('Are you sure? Existing data for this field will be hidden.')) return;
+        try {
+            const updatedConfig = customFieldsConfig.filter(f => f.key !== key);
+            await companyAPI.updateSettings({ client_fields_config: updatedConfig });
+            setCustomFieldsConfig(updatedConfig);
         } catch (err) {
             alert(err.message);
         }
@@ -378,6 +413,19 @@ const Dashboard = ({ user, onLogout }) => {
                                 <circle cx="19" cy="8" r="3" />
                             </svg>
                             Team
+                        </button>
+                    )}
+
+                    {currentMember && ['super_admin', 'admin'].includes(currentMember.role) && (
+                        <button
+                            className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('settings')}
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            Settings
                         </button>
                     )}
                 </nav>
@@ -648,6 +696,62 @@ const Dashboard = ({ user, onLogout }) => {
                         </div>
                     </div>
                 )}
+
+                {activeTab === 'settings' && (
+                    <div className="settings-section">
+                        <header className="content-header">
+                            <div>
+                                <h1>Settings</h1>
+                                <p className="header-subtitle">Manage company configuration</p>
+                            </div>
+                        </header>
+
+                        <div className="settings-card" style={{ background: 'white', padding: '24px', borderRadius: '12px', marginTop: '20px' }}>
+                            <h2>Custom Client Fields</h2>
+                            <p style={{ color: '#666', marginBottom: '20px' }}>
+                                Add extra fields to track specific information about your clients.
+                            </p>
+
+                            <div className="custom-fields-list" style={{ marginBottom: '20px' }}>
+                                {customFieldsConfig.map(field => (
+                                    <div key={field.key} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', borderBottom: '1px solid #eee', alignItems: 'center' }}>
+                                        <div>
+                                            <strong>{field.label}</strong> <span style={{ color: '#999', fontSize: '13px' }}>({field.type})</span>
+                                        </div>
+                                        <button onClick={() => handleDeleteField(field.key)} style={{ color: '#ff4d4f', border: 'none', background: 'none', cursor: 'pointer' }}>Delete</button>
+                                    </div>
+                                ))}
+                                {customFieldsConfig.length === 0 && <div className="text-muted">No custom fields defined.</div>}
+                            </div>
+
+                            <form onSubmit={handleAddField} style={{ display: 'flex', gap: '10px', alignItems: 'end', background: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>Field Label</label>
+                                    <input
+                                        required
+                                        value={newFieldDefinition.label}
+                                        onChange={e => setNewFieldDefinition({ ...newFieldDefinition, label: e.target.value })}
+                                        placeholder="e.g. Birthday"
+                                        style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                                    />
+                                </div>
+                                <div style={{ width: '150px' }}>
+                                    <label style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>Type</label>
+                                    <select
+                                        value={newFieldDefinition.type}
+                                        onChange={e => setNewFieldDefinition({ ...newFieldDefinition, type: e.target.value })}
+                                        style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                                    >
+                                        <option value="text">Text</option>
+                                        <option value="number">Number</option>
+                                        <option value="date">Date</option>
+                                    </select>
+                                </div>
+                                <button type="submit" className="primary-btn" style={{ height: '35px' }}>Add Field</button>
+                            </form>
+                        </div>
+                    </div>
+                )}
             </main>
 
             {/* Client Card Modal */}
@@ -716,6 +820,25 @@ const Dashboard = ({ user, onLogout }) => {
                                         placeholder="Phone Number"
                                     />
                                 </div>
+
+                                {/* Dynamic Custom Fields */}
+                                {customFieldsConfig.map(field => (
+                                    <div className="form-group" key={field.key}>
+                                        <label>{field.label}</label>
+                                        <input
+                                            type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
+                                            value={newClient.custom_fields?.[field.key] || ''}
+                                            onChange={e => setNewClient({
+                                                ...newClient,
+                                                custom_fields: {
+                                                    ...newClient.custom_fields,
+                                                    [field.key]: e.target.value
+                                                }
+                                            })}
+                                            placeholder={field.label}
+                                        />
+                                    </div>
+                                ))}
                             </div>
                             <div className="modal-footer">
                                 <button type="button" className="cancel-btn" onClick={() => setShowAddClient(false)}>Cancel</button>

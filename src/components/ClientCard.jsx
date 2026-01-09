@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import './ClientCard.css';
-import { inventoryAPI, activitiesAPI } from '../services/api';
+import { inventoryAPI, activitiesAPI, clientsAPI, companyAPI } from '../services/api';
 
 const ClientCard = ({ client, onClose, onUpdate }) => {
     const [activeTab, setActiveTab] = useState('inventory'); // Default to inventory for this task
     const [history, setHistory] = useState([]);
     const [inventoryItems, setInventoryItems] = useState([]);
     const [loading, setLoading] = useState(false);
+
+    // Custom Fields Config
+    const [fieldDefinitions, setFieldDefinitions] = useState([]);
+
+    // Edit Mode State
+    const [isEditing, setIsEditing] = useState(false);
+    const [editData, setEditData] = useState({});
 
     // Take Item State
     const [showTakeItem, setShowTakeItem] = useState(false);
@@ -15,11 +22,64 @@ const ClientCard = ({ client, onClose, onUpdate }) => {
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
+        loadFieldDefinitions();
+    }, []);
+
+    useEffect(() => {
         if (activeTab === 'inventory') {
             loadHistory();
             loadInventoryItems();
         }
     }, [activeTab]);
+
+    const loadFieldDefinitions = async () => {
+        try {
+            const data = await companyAPI.getSettings();
+            setFieldDefinitions(data.client_fields_config || []);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const handleEditToggle = () => {
+        if (!isEditing) {
+            // Initialize edit form with current client data
+            setEditData({
+                name: client.name,
+                email: client.email,
+                phone: client.phone,
+                address: client.address,
+                company: client.company,
+                custom_fields: client.custom_fields ? JSON.parse(client.custom_fields) : {}
+                // Note: server returns JSON string or we parse it earlier? 
+                // DB sends string, let's check. Use a safe parse.
+            });
+            // Actually, client object passed in likely came from table which didn't parse JSON
+            // If the table loaded raw data, custom_fields is a JSON string.
+        }
+        setIsEditing(!isEditing);
+    };
+
+    const handleSaveProfile = async (e) => {
+        e.preventDefault();
+        try {
+            await clientsAPI.update(client.id, editData);
+            setIsEditing(false);
+            onUpdate(); // Reload parent list
+            onClose(); // Close or refresh current? Let's close for simplicity
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
+    // Helper to parse custom fields from prop
+    const getCustomFields = () => {
+        if (!client.custom_fields) return {};
+        if (typeof client.custom_fields === 'object') return client.custom_fields;
+        try {
+            return JSON.parse(client.custom_fields);
+        } catch (e) { return {}; }
+    };
 
     const loadHistory = async () => {
         try {
@@ -97,18 +157,98 @@ const ClientCard = ({ client, onClose, onUpdate }) => {
                 <div className="card-content">
                     {activeTab === 'info' && (
                         <div className="info-tab">
-                            <div className="info-row">
-                                <label>Email:</label>
-                                <span>{client.email || '-'}</span>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+                                <button className="secondary-btn sm" onClick={handleEditToggle}>
+                                    {isEditing ? 'Cancel Edit' : 'Edit Profile'}
+                                </button>
                             </div>
-                            <div className="info-row">
-                                <label>Phone:</label>
-                                <span>{client.phone || '-'}</span>
-                            </div>
-                            <div className="info-row">
-                                <label>Address:</label>
-                                <span>{client.address || '-'}</span>
-                            </div>
+
+                            {isEditing ? (
+                                <form onSubmit={handleSaveProfile} className="edit-form-grid">
+                                    <div className="form-group">
+                                        <label>Name</label>
+                                        <input
+                                            value={editData.name || ''}
+                                            onChange={e => setEditData({ ...editData, name: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Company</label>
+                                        <input
+                                            value={editData.company || ''}
+                                            onChange={e => setEditData({ ...editData, company: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Email</label>
+                                        <input
+                                            value={editData.email || ''}
+                                            onChange={e => setEditData({ ...editData, email: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Phone</label>
+                                        <input
+                                            value={editData.phone || ''}
+                                            onChange={e => setEditData({ ...editData, phone: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Address</label>
+                                        <input
+                                            value={editData.address || ''}
+                                            onChange={e => setEditData({ ...editData, address: e.target.value })}
+                                        />
+                                    </div>
+
+                                    {/* Edit Custom Fields */}
+                                    {fieldDefinitions.map(field => (
+                                        <div className="form-group" key={field.key}>
+                                            <label>{field.label}</label>
+                                            <input
+                                                type={field.type || 'text'}
+                                                value={editData.custom_fields?.[field.key] || ''}
+                                                onChange={e => setEditData({
+                                                    ...editData,
+                                                    custom_fields: {
+                                                        ...editData.custom_fields,
+                                                        [field.key]: e.target.value
+                                                    }
+                                                })}
+                                            />
+                                        </div>
+                                    ))}
+
+                                    <div style={{ gridColumn: '1 / -1', marginTop: '10px' }}>
+                                        <button type="submit" className="primary-btn">Save Changes</button>
+                                    </div>
+                                </form>
+                            ) : (
+                                <>
+                                    <div className="info-row">
+                                        <label>Email:</label>
+                                        <span>{client.email || '-'}</span>
+                                    </div>
+                                    <div className="info-row">
+                                        <label>Phone:</label>
+                                        <span>{client.phone || '-'}</span>
+                                    </div>
+                                    <div className="info-row">
+                                        <label>Address:</label>
+                                        <span>{client.address || '-'}</span>
+                                    </div>
+                                    {/* Display Custom Fields */}
+                                    {fieldDefinitions.map(field => {
+                                        const val = getCustomFields()[field.key];
+                                        return (
+                                            <div className="info-row" key={field.key}>
+                                                <label>{field.label}:</label>
+                                                <span>{val || '-'}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </>
+                            )}
                         </div>
                     )}
 
