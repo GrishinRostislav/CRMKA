@@ -5,11 +5,15 @@
 :80 {
     root * /srv
     encode gzip
-    
-    # Serve static files (React)
-    file_server
-    try_files {path} /index.html
 
-    # Proxy API to backend
-    reverse_proxy /api/* backend:3001
+    # Handle API requests (Proxy to backend)
+    handle /api/* {
+        reverse_proxy backend:3001
+    }
+
+    # Handle frontend requests (Serve React App)
+    handle {
+        try_files {path} /index.html
+        file_server
+    }
 }
