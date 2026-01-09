@@ -1,8 +1,10 @@
 # Stage 1: Build the React application
-FROM node:18-alpine as build
+FROM node:18-slim as build
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
+# Fix permissions for binaries
+RUN chmod -R +x node_modules/.bin
 
 # Copy source code
 COPY . .
