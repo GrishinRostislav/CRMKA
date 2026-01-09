@@ -120,6 +120,17 @@ db.exec(`
   )
 `);
 
+// ==================== MIGRATIONS ====================
+try {
+  db.prepare('ALTER TABLE companies ADD COLUMN client_fields_config TEXT DEFAULT "[]"').run();
+  console.log('Migrated: companies.client_fields_config added');
+} catch (e) { }
+
+try {
+  db.prepare('ALTER TABLE clients ADD COLUMN custom_fields TEXT DEFAULT "{}"').run();
+  console.log('Migrated: clients.custom_fields added');
+} catch (e) { }
+
 // 7. Inventory Transactions (History)
 db.exec(`
   CREATE TABLE IF NOT EXISTS inventory_transactions (
@@ -260,6 +271,28 @@ app.get('/api/me/companies', authenticateToken, (req, res) => {
   res.json({ companies });
 });
 
+// Get Company Settings (including Custom Fields config)
+app.get('/api/company/settings', authenticateToken, requireCompany, (req, res) => {
+  const company = db.prepare('SELECT client_fields_config FROM companies WHERE id = ?').get(req.companyId);
+  res.json({
+    client_fields_config: company.client_fields_config ? JSON.parse(company.client_fields_config) : []
+  });
+});
+
+// Update Company Settings (Custom Fields)
+app.patch('/api/company/settings', authenticateToken, requireCompany, (req, res) => {
+  if (!['super_admin', 'admin'].includes(req.member.role)) {
+    return res.status(403).json({ error: 'Only admins can change settings' });
+  }
+
+  const { client_fields_config } = req.body;
+
+  db.prepare('UPDATE companies SET client_fields_config = ? WHERE id = ?')
+    .run(JSON.stringify(client_fields_config || []), req.companyId);
+
+  res.json({ message: 'Settings updated', client_fields_config });
+});
+
 // 4. Create New Company (for existing user)
 app.post('/api/companies', authenticateToken, (req, res) => {
   const { name } = req.body;
@@ -358,11 +391,40 @@ app.get('/api/clients', authenticateToken, requireCompany, (req, res) => {
 });
 
 app.post('/api/clients', authenticateToken, requireCompany, (req, res) => {
-  const { name, company, email, phone } = req.body;
+  const { name, company, email, phone, custom_fields } = req.body;
+  const customFieldsJSON = custom_fields ? JSON.stringify(custom_fields) : '{}';
+
   db.prepare(`
-    INSERT INTO clients (company_id, name, company, email, phone) VALUES (?, ?, ?, ?, ?)
-  `).run(req.companyId, name, company, email, phone);
+    INSERT INTO clients (company_id, name, company, email, phone, custom_fields) VALUES (?, ?, ?, ?, ?, ?)
+  `).run(req.companyId, name, company, email, phone, customFieldsJSON);
   res.json({ message: 'Client created' });
+});
+
+// Update Client
+app.patch('/api/clients/:id', authenticateToken, requireCompany, (req, res) => {
+  const { name, company, email, phone, custom_fields } = req.body;
+  const clientId = req.params.id;
+
+  // Build dynamic update query
+  let updates = [];
+  let values = [];
+
+  if (name !== undefined) { updates.push('name = ?'); values.push(name); }
+  if (company !== undefined) { updates.push('company = ?'); values.push(company); }
+  if (email !== undefined) { updates.push('email = ?'); values.push(email); }
+  if (phone !== undefined) { updates.push('phone = ?'); values.push(phone); }
+  if (custom_fields !== undefined) {
+    updates.push('custom_fields = ?');
+    values.push(JSON.stringify(custom_fields));
+  }
+
+  if (updates.length === 0) return res.json({ message: 'No changes' });
+
+  values.push(clientId);
+  values.push(req.companyId);
+
+  db.prepare(`UPDATE clients SET ${updates.join(', ')} WHERE id = ? AND company_id = ?`).run(...values);
+  res.json({ message: 'Client updated' });
 });
 
 // 3. Activities

@@ -104,6 +104,28 @@ export const companyAPI = {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error);
         return data; // { message, name }
+    },
+
+    // Get Company Settings (Custom Fields)
+    async getSettings() {
+        const response = await fetch(`${API_URL}/company/settings`, {
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+        return data; // { client_fields_config: [] }
+    },
+
+    // Update Company Settings
+    async updateSettings(settings) {
+        const response = await fetch(`${API_URL}/company/settings`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(settings)
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+        return data;
     }
 };
 
@@ -159,6 +181,15 @@ export const clientsAPI = {
             body: JSON.stringify(clientData)
         });
         if (!response.ok) throw new Error('Failed');
+    },
+
+    async update(id, clientData) {
+        const response = await fetch(`${API_URL}/clients/${id}`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(clientData)
+        });
+        if (!response.ok) throw new Error('Failed to update client');
     }
 };
 
