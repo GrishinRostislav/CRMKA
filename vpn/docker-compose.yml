@@ -7,7 +7,7 @@ services:
       # The public IP of your server (REQUIRED!)
       - WG_HOST=158.69.205.142
       # Admin Web UI Password Hash (managed via wgpw.sh)
-      - PASSWORD_HASH=$2a$12$a/aX5.3l1Ezdszp0XyFRn.ZafaDu5/WVTMfpvZNVtiamdNYQTuVYe
+      - PASSWORD_HASH=$$2a$$12$$a/aX5.3l1Ezdszp0XyFRn.ZafaDu5/WVTMfpvZNVtiamdNYQTuVYe
       # UDP Port for VPN Traffic
       - WG_PORT=51820
       - WG_DEFAULT_ADDRESS=10.8.0.x
