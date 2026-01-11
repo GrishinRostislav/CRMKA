@@ -32,3 +32,18 @@ If you don't have a domain yet, we can use `nip.io`. It allows you to use your I
 ## 3. Result
 You can now access your CRM at: **https://crm.158.69.205.142.nip.io**
 It will look like a real production site with a secure lock icon.
+
+## 4. VPN Access (WireGuard)
+Secure your connection and access internal services safely.
+
+**Web Panel**: `http://158.69.205.142:51821`
+**Password**: `changeme123`
+
+### Setup Steps
+1.  **Login**: Open the link above and enter the password.
+2.  **Create Client**: Click "**New Client**", give it a name (e.g., "iPhone").
+3.  **Connect**:
+    - **Phone**: Download the WireGuard app App Store/Google Play and scan the QR code.
+    - **PC**: Download the config file and import it into the WireGuard desktop app.
+
+*Note: Once connected, your internet traffic goes through the VPS. This is great for public Wi-Fi security.*
