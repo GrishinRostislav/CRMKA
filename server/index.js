@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import VpnService from './services/VpnService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -576,6 +577,55 @@ app.get('/api/clients/:id/inventory', authenticateToken, requireCompany, (req, r
   `).all(req.params.id, req.companyId);
 
   res.json({ history });
+});
+
+// ==================== VPN ROUTES ====================
+
+// Middleware: Require Super Admin (Global or Company specific?)
+// Assuming VPN is a system-wide resource, accessible by any Super Admin
+const requireSuperAdmin = (req, res, next) => {
+  // We need to resolve member role if not already done.
+  // If accessing via /api/vpn, we might not have 'x-company-id'.
+  // Let's assume VPN is managed by the owner of the FIRST company (ID 1) or just check if user is owner of ANY company.
+  // Simpler: Check if user has 'super_admin' role in company 1?
+  // OR: Just allow any authenticated user who is a super_admin in their context.
+  // For now, let's just use authenticateToken and check if they are in 'admin' list (if we had one).
+  // Let's rely on 'requireCompany' middleware and force Company ID 1 (Primary) for VPN ops?
+  // Or just check req.member.role === 'super_admin'
+  if (req.member?.role !== 'super_admin') {
+    return res.status(403).json({ error: 'VPN Management requires Super Admin' });
+  }
+  next();
+};
+
+app.get('/api/vpn/clients', authenticateToken, requireCompany, requireSuperAdmin, async (req, res) => {
+  const clients = await VpnService.getClients();
+  res.json(clients);
+});
+
+app.post('/api/vpn/clients', authenticateToken, requireCompany, requireSuperAdmin, async (req, res) => {
+  try {
+    await VpnService.createClient(req.body.name);
+    res.json({ message: 'Client created' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/vpn/clients/:id', authenticateToken, requireCompany, requireSuperAdmin, async (req, res) => {
+  await VpnService.deleteClient(req.params.id);
+  res.json({ message: 'Client deleted' });
+});
+
+app.post('/api/vpn/clients/:id/limit', authenticateToken, requireCompany, requireSuperAdmin, async (req, res) => {
+  const { speed, traffic } = req.body;
+  await VpnService.updateLimits(req.params.id, speed, traffic);
+  res.json({ message: 'Limits updated' });
+});
+
+app.get('/api/vpn/metrics', authenticateToken, requireCompany, requireSuperAdmin, async (req, res) => {
+  const metrics = await VpnService.getMetrics();
+  res.json(metrics);
 });
 
 app.listen(PORT, () => {
