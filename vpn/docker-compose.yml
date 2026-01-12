@@ -29,17 +29,7 @@ services:
   wireguard-exporter:
     image: mindflavor/prometheus-wireguard-exporter:latest
     container_name: wireguard-exporter
-    # TRICK: Run in the same network namespace as wg-easy to see the 'wg0' interface!
-    network_mode: "service:wg-easy"
-    cap_add:
-      - NET_ADMIN # Needed to query the interface
-    command:
-      - "-a"
-      - "true" # Enable metrics for all peers
-      # Since we are in the same network namespace, we bind to localhost inside that namespace.
-      # BUT, Prometheus is in a different container. 
-      # Actually, 'network_mode: service:wg-easy' makes localhost shared. 
-      # So Prometheus connects to 'wg-easy:9586'.
+    network_mode: "host"
     restart: unless-stopped
 
   prometheus:
