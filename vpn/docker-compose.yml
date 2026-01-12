@@ -29,7 +29,13 @@ services:
   wireguard-exporter:
     image: mindflavor/prometheus-wireguard-exporter:latest
     container_name: wireguard-exporter
-    network_mode: "host"
+    network_mode: "service:wg-easy"
+    cap_add:
+      - NET_ADMIN
+    user: "0:0"
+    command: [ "--prepend_sudo", "false", "--extract_names_config_files", "/etc/wireguard/wg0.conf" ]
+    volumes:
+      - ./config:/etc/wireguard:ro
     restart: unless-stopped
 
   prometheus:
@@ -59,6 +65,25 @@ services:
       - "3002:3000"
     restart: unless-stopped
 
+  node-exporter:
+    image: prom/node-exporter
+    container_name: vpn-node-exporter
+    volumes:
+      - ./metrics:/var/lib/node_exporter
+    command:
+      - '--collector.textfile.directory=/var/lib/node_exporter'
+      - '--no-collector.cpu'
+      - '--no-collector.filesystem'
+      - '--no-collector.meminfo'
+      - '--no-collector.netdev'
+    restart: unless-stopped
+
 volumes:
   prometheus_data:
   grafana_data:
+
+
+networks:
+  default:
+    name: crm_shared
+    external: true

@@ -4,4 +4,4 @@ global:
 scrape_configs:
   - job_name: 'wireguard'
     static_configs:
-      - targets: ['localhost:9586']
+      - targets: ['wg-easy:9586', 'node-exporter:9100']

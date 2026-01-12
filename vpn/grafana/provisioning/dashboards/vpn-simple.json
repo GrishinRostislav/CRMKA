@@ -77,13 +77,36 @@
                     "format": "table",
                     "instant": true,
                     "refId": "B"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "vpn_client_info_limit_speed",
+                    "format": "table",
+                    "instant": true,
+                    "refId": "C"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "vpn_client_limit_traffic_bytes",
+                    "format": "table",
+                    "instant": true,
+                    "refId": "D"
                 }
             ],
             "title": "VPN Клиенты - Статистика",
             "transformations": [
                 {
-                    "id": "merge",
-                    "options": {}
+                    "id": "joinByField",
+                    "options": {
+                        "byField": "allowed_ips",
+                        "mode": "outer"
+                    }
                 },
                 {
                     "id": "organize",
@@ -91,14 +114,30 @@
                         "excludeByName": {
                             "Time": true,
                             "__name__": true,
+                            "instance": true,
                             "job": true,
-                            "instance": true
+                            "interface": true,
+                            "public_key": true,
+                            "Value #C": true,
+                            "friendly_name 1": true,
+                            "friendly_name 2": true,
+                            "friendly_name 3": true
                         },
-                        "indexByName": {},
+                        "indexByName": {
+                            "friendly_name": 0,
+                            "allowed_ips": 1,
+                            "Value #B": 2,
+                            "Value #A": 3,
+                            "limit": 4,
+                            "Value #D": 5
+                        },
                         "renameByName": {
-                            "public_key": "Клиент (Public Key)",
-                            "Value #A": "Получено (bytes)",
-                            "Value #B": "Отправлено (bytes)"
+                            "friendly_name": "Name",
+                            "allowed_ips": "IP Address",
+                            "Value #B": "Sent",
+                            "Value #A": "Received",
+                            "limit": "Max Speed",
+                            "Value #D": "Max Traffic"
                         }
                     }
                 }
