@@ -37,7 +37,7 @@ It will look like a real production site with a secure lock icon.
 Secure your connection and access internal services safely.
 
 **Web Panel**: `http://158.69.205.142:51821`
-**Password**: `changeme123`
+**Password**: `THEc00ldayRASTA`
 
 ### Setup Steps
 1.  **Login**: Open the link above and enter the password.
@@ -47,3 +47,27 @@ Secure your connection and access internal services safely.
     - **PC**: Download the config file and import it into the WireGuard desktop app.
 
 *Note: Once connected, your internet traffic goes through the VPS. This is great for public Wi-Fi security.*
+
+## 5. Client Management & Monitoring
+
+### Adding New People (Your Main Panel)
+Все управление людьми остается в **WireGuard Easy**.
+1.  **Адрес**: `http://158.69.205.142:51821`
+2.  **Пароль**: `THEc00ldayRASTA`
+3.  **Действие**: Кнопка **+ New Client**. Вписываете имя (например, "Oleg iPhone"), скачиваете конфиг или даете сканировать QR-код.
+
+### Watching Traffic (Your Dashboard)
+Здесь вы смотрите, кто сколько скачал.
+1.  **Адрес**: `http://158.69.205.142:3002`
+2.  **Логин**: `admin` / `admin`
+3.  Импортируйте Dashboard ID **11585** для красивых графиков.
+
+### Limiting Speed (Manual Control)
+Чтобы наказать "качка", используйте скрипт на сервере:
+```bash
+# Подключитесь по SSH
+ssh ubuntu@158.69.205.142
+cd crmka/vpn
+# Ограничить IP 10.8.0.2 до 5 Мбит
+./limit_speed.sh 10.8.0.2 5mbit 5mbit
+```
