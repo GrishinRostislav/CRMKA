@@ -30,6 +30,11 @@ services:
     image: mindflavor/prometheus-wireguard-exporter:latest
     container_name: wireguard-exporter
     network_mode: "host"
+    command:
+      - "-a"
+      - "true"
+      - "--prepend_sudo"
+      - "false"
     restart: unless-stopped
 
   prometheus:
