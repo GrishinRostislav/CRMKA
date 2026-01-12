@@ -4,7 +4,7 @@ services:
     environment:
       - LANG=ru
       - WG_HOST=158.69.205.142
-      - PASSWORD_HASH=$$2a$$12$$a/aX5.3l1Ezdszp0XyFRn.ZafaDu5/WVTMfpvZNVtiamdNYQTuVYe
+      - PASSWORD=admin123
       - WG_PORT=51820
       - WG_DEFAULT_ADDRESS=10.8.0.x
       - WG_DEFAULT_DNS=1.1.1.1
@@ -45,12 +45,6 @@ services:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     restart: unless-stopped
-    # It needs to talk to wg-easy container (where exporter lives on localhost)
-    # Since exporter shares net with wg-easy, we can access it via 'wg-easy' hostname in the bridge network?
-    # No, 'network_mode: service' removes the container from the default bridge DNS if not handled carefully.
-    # PROPER WAY:
-    # Exporter is essentially running INSIDE wg-easy's network.
-    # So Prometheus should target 'wg-easy:9586'.
     depends_on:
       - wg-easy
 
@@ -76,6 +70,18 @@ services:
       - '--no-collector.filesystem'
       - '--no-collector.meminfo'
       - '--no-collector.netdev'
+    restart: unless-stopped
+
+  # Manager Sidecar to enforce limits
+  vpn-manager:
+    build: ./manager
+    container_name: vpn-manager
+    volumes:
+      - ./config:/etc/wireguard
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - wg-easy
+      - prometheus
     restart: unless-stopped
 
 volumes:

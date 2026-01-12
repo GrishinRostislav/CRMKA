@@ -7,6 +7,7 @@ This task involves deploying a personal VPN server using `wg-easy`.
 - [x] Start VPN Service
 
 - [x] Verify Web UI Access (Port 51821)
+- [x] Fix Dashboard Client Names (switched to friendly_name)
 
 
 ## Details
